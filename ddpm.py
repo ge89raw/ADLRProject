@@ -30,23 +30,56 @@ class MLP(nn.Module):
                  time_emb: str = "sinusoidal", input_emb: str = "sinusoidal"):
         super().__init__()
 
+        self.emb_size = emb_size
+
         self.time_mlp = PositionalEmbedding(emb_size, time_emb)
-        self.input_mlp1 = PositionalEmbedding(emb_size, input_emb, scale=25.0)
-        self.input_mlp2 = PositionalEmbedding(emb_size, input_emb, scale=25.0)
+        self.input_mlp = PositionalEmbedding(emb_size, input_emb)#, scale=25.0) 
+        
+
+        self.conv_layers = nn.Sequential(
+            nn.Conv3d(in_channels=1, out_channels=16, kernel_size=3, padding=0),
+            nn.ReLU(),
+            nn.MaxPool3d(kernel_size=2, stride=2),
+            nn.Conv3d(in_channels=16, out_channels=32, kernel_size=3, padding=0),
+            nn.ReLU(),
+            nn.MaxPool3d(kernel_size=2, stride=2),
+            nn.Conv3d(in_channels=32, out_channels=64, kernel_size=3, padding=0),
+            nn.ReLU(),
+            nn.MaxPool3d(kernel_size=2, stride=2),
+            nn.Flatten(),
+            nn.Linear(64*4*4*4, 512) # emb size for distances = 512
+        )
+        
 
         concat_size = len(self.time_mlp.layer) + \
-            len(self.input_mlp1.layer) + len(self.input_mlp2.layer)
+            len(self.input_mlp.layer)* 28 + 3 + 512 #28 is the number of joint angles + 3 of the one_hot vector + 512 for the distance matrix
         layers = [nn.Linear(concat_size, hidden_size), nn.GELU()]
         for _ in range(hidden_layers):
             layers.append(Block(hidden_size))
-        layers.append(nn.Linear(hidden_size, 2))
+        layers.append(nn.Linear(hidden_size, 28)) # This is the dimension ( it was 2 in the example model) it is 28 in our case (joint angles+rotation+translation)
         self.joint_mlp = nn.Sequential(*layers)
 
-    def forward(self, x, t):
-        x1_emb = self.input_mlp1(x[:, 0])
-        x2_emb = self.input_mlp2(x[:, 1])
+
+    def forward(self, x, t, label, object): 
+        # embedding of the time vector:
         t_emb = self.time_mlp(t)
-        x = torch.cat((x1_emb, x2_emb, t_emb), dim=-1)
+
+        # embedding of the x vector (our joint angles):
+        x_emb = self.input_mlp(x)
+        x_emb = x_emb.reshape(x.size(0),-1)
+        
+        # padding our one hot vector (label):
+        # extend the one hot vector: original one hot vector dim = 3, we want one hot vector dim = emb_size
+        label_tensor= torch.tensor(label, dtype=torch.float32)
+        #zeros_tensor = torch.zeros(label_tensor.size(0),self.emb_size-label_tensor.size(1), dtype=torch.float32)
+        #one_hot_vector = torch.cat((label_tensor, zeros_tensor), dim=-1)
+
+        # passing the distance matrix through 3D conv network
+        distance_mesh = self.conv_layers(object.unsqueeze(1).to(torch.float32))
+
+        # concatenating our data: time + joint angles + one hot vector
+        x = torch.cat((x_emb, t_emb, label_tensor, distance_mesh), dim=-1).to(torch.float32)
+
         x = self.joint_mlp(x)
         return x
 
@@ -181,6 +214,7 @@ if __name__ == "__main__":
         progress_bar = tqdm(total=len(dataloader))
         progress_bar.set_description(f"Epoch {epoch}")
         for step, batch in enumerate(dataloader):
+            #print(batch)
             batch = batch[0]
             noise = torch.randn(batch.shape)
             timesteps = torch.randint(

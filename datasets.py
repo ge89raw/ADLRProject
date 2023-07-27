@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import torch
 
-from sklearn.datasets import make_moons
+#from sklearn.datasets import make_moons
 from torch.utils.data import TensorDataset
 
 
