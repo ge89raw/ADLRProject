@@ -35,7 +35,7 @@ class MLP(nn.Module):
         self.time_mlp = PositionalEmbedding(emb_size, time_emb)
         self.input_mlp = PositionalEmbedding(emb_size, input_emb)#, scale=25.0) 
         
-
+        '''
         self.conv_layers = nn.Sequential(
             nn.Conv3d(in_channels=1, out_channels=16, kernel_size=3, padding=0),
             nn.ReLU(),
@@ -49,10 +49,11 @@ class MLP(nn.Module):
             nn.Flatten(),
             nn.Linear(64*4*4*4, 512) # emb size for distances = 512
         )
+        '''
         
 
         concat_size = len(self.time_mlp.layer) + \
-            len(self.input_mlp.layer)* 28 + 3 + 512 #28 is the number of joint angles + 3 of the one_hot vector + 512 for the distance matrix
+            len(self.input_mlp.layer)* 28 + 3 #+ 512 #28 is the number of joint angles + 3 of the one_hot vector + 512 for the distance matrix
         layers = [nn.Linear(concat_size, hidden_size), nn.GELU()]
         for _ in range(hidden_layers):
             layers.append(Block(hidden_size))
@@ -75,10 +76,12 @@ class MLP(nn.Module):
         #one_hot_vector = torch.cat((label_tensor, zeros_tensor), dim=-1)
 
         # passing the distance matrix through 3D conv network
-        distance_mesh = self.conv_layers(object.unsqueeze(1).to(torch.float32))
+        #distance_mesh = self.conv_layers(object.unsqueeze(1).to(torch.float32))
 
         # concatenating our data: time + joint angles + one hot vector
-        x = torch.cat((x_emb, t_emb, label_tensor, distance_mesh), dim=-1).to(torch.float32)
+        x = torch.cat((x_emb, t_emb, label_tensor), dim=-1).to(torch.float32)
+        #x = torch.cat((x_emb, t_emb, label_tensor, distance_mesh), dim=-1).to(torch.float32)
+
 
         x = self.joint_mlp(x)
         return x

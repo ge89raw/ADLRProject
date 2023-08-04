@@ -148,10 +148,22 @@ class graspDataset(Dataset):
 
 
     def __len__(self):
-        return len(self.data_joints)
-
-
+        #return len(self.data_joints)
+        return 8000
+                
     def __getitem__(self, index):
+
+        if index >= 8000:
+            raise StopIteration
+
+        
+
+        if index >= 4000:
+            index = 1
+
+        else:
+            index = 0
+        
 
         data_dict = np.load(self.data_joints[index], allow_pickle=True).item() #loaded as np.array, need to add .item() to convert it to dictionary type
 
