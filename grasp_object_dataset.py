@@ -130,7 +130,7 @@ class graspDataset(Dataset):
     
     def _normalize_data(self, data):
 
-        normalized_data = (data - self.min) / (self.max - self.min)  # Normalize between 0 and 1
+        normalized_data = (data - self.min) / ((self.max - self.min) + 1e-12)  # Normalize between 0 and 1
         normalized_data = normalized_data * 2 - 1  # Normalize between -1 and 1
         return normalized_data
     
