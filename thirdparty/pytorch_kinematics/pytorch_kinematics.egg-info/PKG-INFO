@@ -1,4 +1,4 @@
-Metadata-Version: 2.1
+Metadata-Version: 1.0
 Name: pytorch-kinematics
 Version: 0.3.0
 Summary: Robot kinematics implemented in pytorch
@@ -6,3 +6,5 @@ Home-page: https://github.com/UM-ARM-Lab/pytorch_kinematics
 Author: zhsh
 Author-email: zhsh@umich.edu
 License: MIT
+Description: UNKNOWN
+Platform: UNKNOWN

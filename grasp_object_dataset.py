@@ -149,16 +149,16 @@ class graspDataset(Dataset):
 
     def __len__(self):
         #return len(self.data_joints)
-        return 8000
+        return 10000
                 
     def __getitem__(self, index):
 
-        if index >= 8000:
+        if index >= 10000:
             raise StopIteration
 
         
 
-        if index >= 4000:
+        if index >= 5000:
             index = 1
 
         else:
