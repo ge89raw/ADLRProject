@@ -34,6 +34,7 @@ class graspDataset(Dataset):
             mode = mode,
         )
 
+        self.cache = {}
         #self.min_value, self.max_value = self._find_min_max_values()
         
 
@@ -148,11 +149,13 @@ class graspDataset(Dataset):
 
 
     def __len__(self):
-        #return len(self.data_joints)
-        return 10000
+        
+        return len(self.data_joints)
+        #return 10000
                 
     def __getitem__(self, index):
 
+        '''
         if index >= 10000:
             raise StopIteration
 
@@ -163,35 +166,39 @@ class graspDataset(Dataset):
 
         else:
             index = 0
-        
+        '''
 
-        data_dict = np.load(self.data_joints[index], allow_pickle=True).item() #loaded as np.array, need to add .item() to convert it to dictionary type
+        if index not in self.cache:
 
-        data_joint = data_dict['grasp']
-        #if self.transform_joint is not None:
-        #    data_joint = self.transform_joint(data_joint)
+            data_dict = np.load(self.data_joints[index], allow_pickle=True).item() #loaded as np.array, need to add .item() to convert it to dictionary type
 
-        # Normalize and redistribute joint data
-        if self.normalization is not None:
-            data_joint = self._normalize_data(data_joint)
-            #data_joint = self._distribute_data(data_joint)
+            data_joint = data_dict['grasp']
+            #if self.transform_joint is not None:
+            #    data_joint = self.transform_joint(data_joint)
 
-        scale = data_dict['scale']
+            # Normalize and redistribute joint data
+            if self.normalization is not None:
+                data_joint = self._normalize_data(data_joint)
+                #data_joint = self._distribute_data(data_joint)
 
-        data_obj = np.load(self.object_meshes[index], allow_pickle=True) * scale
-        #if self.transform_object is not None:
-        #    data_obj = self.transform_object(data_obj)
+            scale = data_dict['scale']
 
-        label = int(self.labels[index])
+            data_obj = np.load(self.object_meshes[index], allow_pickle=True) * scale
+            #if self.transform_object is not None:
+            #    data_obj = self.transform_object(data_obj)
 
-        # Create a one-hot vector
-        one_hot_vector = np.zeros(len(self.classes))
-        one_hot_vector[label] = 1
+            label = int(self.labels[index])
 
-        # Object names
-        name = self.object_names[index]
+            # Create a one-hot vector
+            one_hot_vector = np.zeros(len(self.classes))
+            one_hot_vector[label] = 1
 
-        data_dict = {"joints":data_joint,"label":one_hot_vector, "mesh": data_obj, 'obj_name': name}
-        data_dict = [data_joint, one_hot_vector, data_obj, name] # Make it like a pytorch ImageFolderDataset output
+            # Object names
+            name = self.object_names[index]
 
-        return data_dict
+            data_dict = {"joints":data_joint,"label":one_hot_vector, "mesh": data_obj, 'obj_name': name}
+            data_dict = [data_joint, one_hot_vector, data_obj, name] # Make it like a pytorch ImageFolderDataset output
+            
+            self.cache[index] = data_dict
+
+        return self.cache[index]
