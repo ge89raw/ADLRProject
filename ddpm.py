@@ -53,11 +53,11 @@ class MLP(nn.Module):
         
 
         concat_size = len(self.time_mlp.layer) + \
-            len(self.input_mlp.layer)* 6 + 3 + 512 #28 is the number of joint angles + 3 of the one_hot vector + 512 for the distance matrix
+            len(self.input_mlp.layer)* 21 + 3 + 512 #28 is the number of joint angles + 3 of the one_hot vector + 512 for the distance matrix
         layers = [nn.Linear(concat_size, hidden_size), nn.GELU()]
         for _ in range(hidden_layers):
             layers.append(Block(hidden_size))
-        layers.append(nn.Linear(hidden_size, 6)) # This is the dimension ( it was 2 in the example model) it is 28 in our case (joint angles+rotation+translation)
+        layers.append(nn.Linear(hidden_size, 21)) # This is the dimension ( it was 2 in the example model) it is 28 in our case (joint angles+rotation+translation)
         self.joint_mlp = nn.Sequential(*layers)
 
 
@@ -82,6 +82,8 @@ class MLP(nn.Module):
         #x = torch.cat((x_emb, t_emb, label_tensor), dim=-1).to(torch.float32)
         x = torch.cat((x_emb, t_emb, label_tensor, distance_mesh), dim=-1).to(torch.float32)
 
+        print(x.shape)
+        #print(self.concat_size)
 
         x = self.joint_mlp(x)
         return x
